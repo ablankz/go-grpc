@@ -6,6 +6,8 @@ Go言語でgrpcを用いた簡易通信
 - [Go](https://marketplace.visualstudio.com/items?itemName=golang.Go)
   - 拡張機能「Go」を入れるだけで、汎用的で優れたGo言語のサポート機能を使うことができます。
   - コードスニペット（予測変換機能 ）を活用して、効率よくコーディングしていきましょう。
+- [vscode-proto3](https://marketplace.visualstudio.com/items?itemName=zxh404.vscode-proto3)
+  - grpcで使用するプロトファイルのフォーマットを行う
 - [Go Outliner](https://marketplace.visualstudio.com/items?itemName=766b.go-outliner)
   - Go言語における、アウトライン機能を強化してくれる拡張機能です。
 - [Go Test Exlorer](https://marketplace.visualstudio.com/items?itemName=premparihar.gotestexplorer)
