@@ -3,15 +3,28 @@ package main
 import (
 	"context"
 	"fmt"
+	"go-grpc/internal/config"
 	"go-grpc/pb"
 	"io"
 	"log"
+	"os"
+	"strconv"
+	"time"
 
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 )
 
 func main() {
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	}
+	cfg, err := config.Get()
+	if err != nil {
+		log.Fatalf("Config Error: %v", err)
+	}
+
+	conn, err := grpc.Dial("localhost:"+strconv.FormatInt(int64(cfg.Port), 10), grpc.WithInsecure())
 
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
@@ -22,7 +35,8 @@ func main() {
 	client := pb.NewFileServiceClient(conn)
 
 	// callListFiles(client)
-	callDownload(client)
+	// callDownload(client)
+	callUpload(client, *cfg)
 }
 
 func callListFiles(client pb.FileServiceClient) {
@@ -54,5 +68,48 @@ func callDownload(client pb.FileServiceClient) {
 		log.Printf("Response fro Download(bytes): %v", res.GetData())
 		log.Printf("Response fro Download(string): %v", string(res.GetData()))
 	}
+}
 
+func callUpload(client pb.FileServiceClient, cfg config.Config) {
+	filename := "sports.txt"
+	path := cfg.LocalRoot + "/storage/" + filename
+
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer file.Close()
+
+	stream, err := client.Upload(context.Background())
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	buf := make([]byte, 5)
+	for {
+		n, err := file.Read(buf)
+		if n == 0 || err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		req := &pb.UploadRequest{Data: buf[:n]}
+		sendErr := stream.Send(req)
+		if sendErr != nil {
+			log.Fatalln(sendErr)
+		}
+
+		if cfg.Debug {
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Printf("received data size: %v", res.GetSize())
 }
