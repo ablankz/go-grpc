@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"go-grpc/internal/config"
 	"go-grpc/pb"
 	"log"
 	"net"
 	"os"
 
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 )
 
@@ -39,6 +41,15 @@ func (*server) ListFiles(ctx context.Context, req *pb.ListFilesRequest) (*pb.Lis
 }
 
 func main() {
+	if err := godotenv.Load(".env"); err != nil {
+		log.Print("No .env file found")
+	}
+	cfg, err := config.Get()
+	if err != nil {
+		log.Fatalf("Config Error: %v", err)
+	}
+
+	fmt.Println(cfg)
 	lis, err := net.Listen("tcp", "localhost:50051")
 	if err != nil {
 		log.Fatalf("Failed to Listen: %v", err)
