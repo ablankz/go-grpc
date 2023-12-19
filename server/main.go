@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"go-grpc/internal/config"
 	"go-grpc/pb"
+	"io"
 	"log"
 	"net"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
@@ -40,6 +42,43 @@ func (s *server) ListFiles(ctx context.Context, req *pb.ListFilesRequest) (*pb.L
 		Filenames: filenames,
 	}
 	return res, nil
+}
+
+func (s *server) Download(req *pb.DownloadRequest, stream pb.FileService_DownloadServer) error {
+	fmt.Println("Download was invoked")
+
+	filename := req.GetFilename()
+	path := s.cfg.LocalRoot + "/storage/" + filename
+
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	buf := make([]byte, 5)
+	for {
+		n, err := file.Read(buf)
+		if n == 0 || err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		res := &pb.DownloadResponse{Data: buf[:n]}
+		sendErr := stream.Send(res)
+		if sendErr != nil {
+			return sendErr
+		}
+
+		if s.cfg.Debug {
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	return nil
 }
 
 func main() {
