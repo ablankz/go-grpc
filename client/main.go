@@ -171,7 +171,7 @@ func callUploadAndNotifyProgress(client pb.FileServiceClient, cfg config.Config)
 				log.Fatalln(err)
 			}
 
-			log.Panicf("received messsage: %v", res.GetMsg())
+			log.Printf("received messsage: %v", res.GetMsg())
 		}
 		close(ch)
 	}()
