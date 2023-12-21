@@ -36,7 +36,8 @@ func main() {
 
 	// callListFiles(client)
 	// callDownload(client)
-	callUpload(client, *cfg)
+	// callUpload(client, *cfg)
+	callUploadAndNotifyProgress(client, *cfg)
 }
 
 func callListFiles(client pb.FileServiceClient) {
@@ -112,4 +113,67 @@ func callUpload(client pb.FileServiceClient, cfg config.Config) {
 	}
 
 	log.Printf("received data size: %v", res.GetSize())
+}
+
+func callUploadAndNotifyProgress(client pb.FileServiceClient, cfg config.Config) {
+	filename := "sports.txt"
+	path := cfg.LocalRoot + "/storage/" + filename
+
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer file.Close()
+
+	stream, err := client.UploadAndNotifyProgress(context.Background())
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// request
+	buf := make([]byte, 5)
+	go func() {
+		for {
+			n, err := file.Read(buf)
+			if n == 0 || err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			req := &pb.UploadAndNotifyProgressRequest{Data: buf[:n]}
+			sendErr := stream.Send(req)
+			if sendErr != nil {
+				log.Fatalln(sendErr)
+			}
+
+			if cfg.Debug {
+				time.Sleep(1 * time.Second)
+			}
+		}
+
+		err := stream.CloseSend()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}()
+
+	// response
+	ch := make(chan struct{})
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			log.Panicf("received messsage: %v", res.GetMsg())
+		}
+		close(ch)
+	}()
+	<-ch
 }
