@@ -103,6 +103,35 @@ func (*server) Upload(stream pb.FileService_UploadServer) error {
 	}
 }
 
+func (*server) UploadAndNotifyProgress(stream pb.FileService_UploadAndNotifyProgressServer) error {
+	fmt.Println("UploadAndNotifyProgress was invoked")
+
+	size := 0
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		data := req.GetData()
+		log.Printf("received data: %v", data)
+
+		size += len(data)
+
+		res := &pb.UploadAndNotifyProgressResponse{
+			Msg: []byte(fmt.Sprintf("received %vbytes", size)),
+		}
+		err = stream.Send(res)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found")
